@@ -2,91 +2,9 @@
 #include <stdio.h>
 #include "fsm.h"
 
-#define NSTATES			30
+#define NSTATES			60
 #define DEBUG			1
 
-typedef enum {
-	CONECT = 0,
-	IDLE,
-	CAL,
-	BIPOT,
-	POT,
-	GALV,
-	EIS,
-	PREP_E,
-	PRETREATMENT,
-	MEASURING,
-	FS_CH,
-	ENDING,
-	ERR
-
-}stateType;
-
-// Array que apunta a las funciones que corren en cada estado
-void(*state_table[])(void) = {
-	conection,
-	Idle,
-	calibration,
-	bipot,
-	pot,
-	galv,
-	eis,
-	PrepE,
-	Pretreatment,
-	Measuring,
-	FS_ch,
-	Ending,
-	Error
-};
-
-
-typedef enum {
-	S_WAITING = 0x00,
-	S_RUNNING = 0x01,
-	S_ERROR = 0x02,
-
-}general_state;
-
-typedef enum {
-	M_NONE = 0x00,
-	M_BIPOT = 0x01,
-	M_POT = 0x02,
-	M_GALV = 0x03,
-	M_EIS = 0x04
-}mode;
-
-
-typedef enum {
-	I_DEFAULT = 0x00,
-	I_SATURA = 0x01,
-	I_BELOW_THRESHOLD = 0x02
-}status_I_measure;
-
-typedef enum {
-	C_NONE = 0x00,
-	C_BT = 0x01,
-	C_USB = 0x02
-}mode_com;
-
-typedef enum {
-	L_EMPTY = 0x00,
-	L_REFRESHED = 0x01,
-	L_FINISHED = 0x02
-}lut_state;
-
-typedef enum {
-	P_NONE = 0x00,
-	P_RUNNING = 0x01,
-	P_FINISHED = 0x02
-}state_pretreatment;
-
-typedef enum {
-	E_NONE = 0x00,
-	E_RUNNING = 0x01,
-	E_CANCELLED = 0x02,
-	E_FINISHED = 0x03,
-	E_ERROR = 0x04
-}state_experiment;
 
 /* Variables para el seguimiento de los estados
 y eventos que disparan las transiciones */
@@ -105,13 +23,28 @@ state_pretreatment pretreatment;
 general_state state_equipment;
 
 
-
+/* Testing variables */
 uint8_t cont = 0;
 stateType lista_estados[200];
 char state;
 uint32_t n;
 
-
+// Array que apunta a las funciones que corren en cada estado
+void(*state_table[])(void) = {
+	conection,
+	Idle,
+	calibration,
+	bipot,
+	pot,
+	galv,
+	eis,
+	PrepE,
+	Pretreatment,
+	Measuring,
+	FS_ch,
+	Ending,
+	Error
+};
 
 main() {
 	start();
@@ -132,7 +65,8 @@ main() {
 
 		/* Código para testear y guardar todos los estados por los
 		que pasa la FSM según los eventos que hemos programado. */
-		vector1(n);
+		//vector1(n);
+		vector2(n);
 		lista_estados[n] = next_state;
 		fprintf(f, "%s\n", printToFile(next_state));
 
@@ -249,23 +183,37 @@ void PrepE() {
 	if (mode_working == M_BIPOT) {
 		// Configuramos FS
 		// Configuramos filtros
-		// Generamos primer refresco LUT
-		// lut1_state = REFRESHED;
+		// Generamos primer refresco LUT1 y LUT2
+		// lut1A_state = REFRESHED y lut2A_state
 
 		// Habilitamos electródos
 
 		/* Hay que preparar dos LUTs, una hará de buffer y se irá cargando mientras se envía la primera */
 
-
 		// Aplicamos el pretratamiento que proceda
 
 	}
 	else if (mode_working == M_POT) {
-		// TODO
+		// Configuramos FS auto o no
+		// Configuramos filtros
+		//Generamos primer refresco de LUT
+		// lut1A_state = REFRESHED;
+
+		// Habilitamos electródos
+
+		// Aplicamos el pretratamiento que proceda
+
 
 	}
 	else if (mode_working == M_GALV) {
-		// TODO
+		// Configuramos FS auto o no
+		// Configuramos filtros
+		//Generamos primer refresco de LUT
+		// lut1A_state = REFRESHED;
+
+		// Habilitamos electródos
+
+		// Aplicamos el pretratamiento que proceda
 
 	}
 	else if (mode_working == M_EIS) {
@@ -296,7 +244,9 @@ void Pretreatment() {
 
 		}
 		else if (mode_working == M_GALV) {
-			// TODO
+			// Enviamos LUT1A a DAC WE1
+
+			// Comenzamos siguiente refresco LUT1B
 		}
 		else if (mode_working == M_EIS) {
 			// TODO
@@ -311,9 +261,27 @@ void Pretreatment() {
 
 
 void Measuring() {
+	// TODO: puede utilizarse el estado de experiment para inicializar
+	// todo solamente en la primera entrada al estado Measuring().
+	// P.Ej:
+	// if(experiment == E_NONE){
+	//		+ Inicializame toda la temporización para recoger muestras en el ADC
+	//		+ Inicializame toda la temporización para lanzar las muestras al DAC
+	//		
+	//		experiment = E_RUNNING; => de esta manera no vuelve a entrar en esta parte
+	// }
+	// else if(experiment == E_RUNNING){
+	// ....
+	// }
+	// else if(experiment == E_FINISHED | experiment == E_CANCELLED){
+	// ...
+	// }
+	// Esto significaría hacer una FSM dentro del propio estado, pasando a trabajar tipo HSM.
 
 	if ((experiment != E_FINISHED) & (experiment != E_CANCELLED)) {
-		if (mode_working == POT) {
+		if (mode_working == M_POT) {
+
+
 			/* Comprobamos si debemos de refrescar alguna LUT */
 			if (lut1A_state == L_FINISHED) {
 				// Refrescamos la LUT
@@ -321,12 +289,9 @@ void Measuring() {
 			}
 			else if (lut1B_state == L_FINISHED) {
 				// Refrescamos la LUT
-				lut2A_state = L_REFRESHED;
+				lut1A_state = L_REFRESHED;
 			}
-			if (lut1B_state == L_FINISHED) {
-				// Refrescamos la LUT
-				lut1B_state = L_REFRESHED;
-			}
+
 
 			/* Comprobamos si debemos cambiar el FS */
 			if (status_I_we1 != I_DEFAULT) {
@@ -357,7 +322,24 @@ void Measuring() {
 			}
 		}
 		else if (mode_working == M_GALV) {
-			// TODO
+			/* Comprobamos si debemos de refrescar alguna LUT */
+			if (lut1A_state == L_FINISHED) {
+				// Refrescamos la LUT
+				lut1A_state = L_REFRESHED;
+			}
+			else if (lut1B_state == L_FINISHED) {
+				// Refrescamos la LUT
+				lut2A_state = L_REFRESHED;
+			}
+			if (lut1B_state == L_FINISHED) {
+				// Refrescamos la LUT
+				lut1B_state = L_REFRESHED;
+			}
+
+			/* Comprobamos si debemos cambiar el FS */
+			if (status_I_we1 != I_DEFAULT) {
+				next_state = FS_CH;
+			}
 		}
 		else if (mode_working == M_EIS) {
 			// TODO
@@ -373,7 +355,7 @@ void Measuring() {
 }
 
 
-// comprobamos si se ha habilitado MAS de un FS. En caso de que haya solamente uno, no debemos entrar en este estado.
+// TODO: comprobamos si se ha habilitado MAS de un FS. En caso de que haya solamente uno, no debemos entrar en este estado.
 void FS_ch() {
 
 	if (mode_working == M_POT) {
@@ -388,7 +370,7 @@ void FS_ch() {
 		}
 
 		status_I_we1 = I_DEFAULT;		// Reseteamos el flag
-		next_state = MEASURING;
+
 	}
 	else if (mode_working == M_BIPOT) {
 		if (status_I_we1 == I_SATURA) {
@@ -413,8 +395,19 @@ void FS_ch() {
 	}
 
 	else if (mode_working == M_GALV) {
-		// TODO
+		if (status_I_we1 == I_SATURA) {
+			// Cambiamos FS WE1 a un FS mayor
+			// Reseteamos FLAG_SATURA_WE1 => flag_satura_we1 = DEFAULT;
+		}
+		else if (status_I_we1 == I_BELOW_THRESHOLD) {
+			// Cambiamos FS WE1 a una FS menor
+			// Reseteamos status_I_we1 => status_I_we1 = DEFAULT;
+
+		}
+
+		status_I_we1 = I_DEFAULT;		// Reseteamos el flag
 	}
+
 	else if (mode_working == M_EIS) {
 		// TODO
 	}
@@ -426,7 +419,7 @@ void FS_ch() {
 }
 
 
-// Hay una opción para dejar el electródo conectado a un determinado potencial al finalizar el experimento. TENER EN CUENTA.
+// TODO: Hay una opción para dejar el electródo conectado a un determinado potencial al finalizar el experimento. TENER EN CUENTA.
 void Ending() {
 
 	// Desconectar electródos
@@ -470,7 +463,7 @@ void calibration() {
 }
 
 
-/* FSM TESTING FUNCTIONS */
+/* ------------------------------------------------------------------------ FSM TESTING FUNCTIONS */
 
 /* VECTOR 1 */
 void vector1(uint32_t cont) {
@@ -518,12 +511,12 @@ void vector1(uint32_t cont) {
 	case 14:
 		break;
 	case 15:
-		status_I_we1 = I_SATURA;
+		status_I_we2 = I_SATURA;
 		break;
 	case 16:
 		break;
 	case 17:
-		status_I_we1 = I_BELOW_THRESHOLD;
+		status_I_we2 = I_BELOW_THRESHOLD;
 		break;
 	case 18:
 		break;
@@ -537,7 +530,84 @@ void vector1(uint32_t cont) {
 
 }
 
+/* VECTOR 2 */
+void vector2(uint32_t cont) {
 
+	switch (cont) {
+	case 0:
+		communication_mode = C_BT;
+		break;
+	case 1:
+		df_mode = M_POT;
+		break;
+	case 2:
+		break;
+	case 3:
+		pretreatment = P_RUNNING;
+		break;
+	case 4:	break;
+	case 5:	break;
+	case 6:	break;
+	case 7:	break;
+	case 8:
+		pretreatment = P_FINISHED;
+		break;
+	case 9:
+		experiment = E_RUNNING;
+		break;
+	case 10: break;
+	case 11:
+		status_I_we1 = I_SATURA;
+		break;
+	case 12: break;
+	case 13: break;
+	case 14:
+		status_I_we1 = I_BELOW_THRESHOLD;
+		break;
+	case 15: break;
+	case 16: break;
+	case 17: break;
+	case 18: break;
+	case 19:
+		experiment = E_FINISHED;
+		break;
+	case 20: break;
+	case 21: break;
+	case 22: break;
+	case 23:
+		df_mode = M_EIS;
+		break;
+	case 24: break;
+	case 25:
+		pretreatment = P_RUNNING;
+		break;
+	case 26: break;
+	case 27: break;
+	case 28:
+		pretreatment = P_FINISHED;
+		break;
+	case 29:
+		experiment = E_RUNNING;
+		break;
+	case 30: break;
+	case 31: break;
+	case 32: break;
+	case 33: break;
+	case 34:
+		experiment = E_FINISHED;
+		break;
+	case 35: break;
+	case 36: break;
+	case 37: break;
+	case 38: break;
+	case 39: break;
+	case 40: break;
+	case 41: break;
+
+	}
+
+
+}
 
 /* Función para imprimir a un txt el listado de estados por los que pasa el equipo */
 const char* printToFile(stateType state) {

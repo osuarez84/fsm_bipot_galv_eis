@@ -1,0 +1,6 @@
+﻿  fsm.c
+d:\01_omar\04_proyectos_para_pruebas\02_micrux\03_visual_studio\02_test_fsm\test_fsm\fsm.c(33): warning C4113: 'void (__cdecl *)()' differs in parameter lists from 'void (__cdecl *)(void)'
+d:\01_omar\04_proyectos_para_pruebas\02_micrux\03_visual_studio\02_test_fsm\test_fsm\fsm.c(58): warning C4013: 'exit' undefined; assuming extern returning int
+d:\01_omar\04_proyectos_para_pruebas\02_micrux\03_visual_studio\02_test_fsm\test_fsm\fsm.c(634): warning C4715: 'printToFile': not all control paths return a value
+  test_fsm.vcxproj -> D:\01_Omar\04_proyectos_para_pruebas\02_Micrux\03_visual_studio\02_test_fsm\test_fsm\Debug\test_fsm.exe
+  test_fsm.vcxproj -> D:\01_Omar\04_proyectos_para_pruebas\02_Micrux\03_visual_studio\02_test_fsm\test_fsm\Debug\test_fsm.pdb (Partial PDB)
